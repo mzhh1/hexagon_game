@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>共享六边形棋盘</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            flex-direction: column; 
+            background-color: #f0f2f5; 
+            margin: 0; 
+            padding: 20px; 
+            box-sizing: border-box; 
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #game-container { 
+            display: flex; 
+            gap: 30px; 
+            align-items: flex-start;
+            width: 100%;
+            max-width: 900px;
+            justify-content: center;
+        }
+        #game-board-container {
+            flex: 1; 
+            max-width: 600px;
+            border: 1px solid #ccc; 
+            background-color: #fff; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        #game-board {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            transition: opacity 0.3s ease;
+        }
+        #game-board.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        #controls { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            background-color: #fff; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+            width: 220px;
+            flex-shrink: 0;
+        }
+        #status-box { padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; border: 1px solid #ddd; transition: background-color 0.3s; }
+        #last-move-info {
+            font-size: 0.9em;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 20px;
+        }
+        #scores-table { width: 100%; border-collapse: collapse; margin-top: 5px; text-align: center;}
+        #scores-table th {
+            font-weight: normal;
+            font-size: 0.8em;
+            color: #666;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        #scores-table td { padding: 6px 2px; }
+        .score-color-box { display: inline-block; width: 15px; height: 15px; border-radius: 3px; vertical-align: middle; }
+        #color-selector, #follow-color-selector { 
+            display: flex; 
+            justify-content: space-around; 
+            padding: 5px 0;
+        }
+        .color-btn { 
+            width: 35px; 
+            height: 35px; 
+            border-radius: 50%; 
+            border: 3px solid transparent; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            padding: 0;
+        }
+        .color-btn.selected { 
+            border-color: #000; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+            transform: scale(1.1); 
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .action-buttons button {
+            width: 100%; padding: 10px 15px; border: none; color: white; font-size: 1em; border-radius: 5px; cursor: pointer; transition: background-color 0.2s;
+        }
+        #reset-button { background-color: #d9534f; }
+        #reset-button:hover { background-color: #c9302c; }
+        /* 【新功能】 悔棋按钮样式 */
+        #undo-button { background-color: #f0ad4e; }
+        #undo-button:hover { background-color: #ec971f; }
+        #undo-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .game-point { cursor: pointer; transition: r 0.2s, fill 0.2s; }
+        .game-point:hover { r: 0.25; }
+        .game-point.selected { fill: #222; r: 0.3; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            #game-container { flex-direction: column; align-items: center; gap: 20px; }
+            #game-board-container { width: 95vw; max-width: 95vw; }
+            #controls { width: 95vw; box-sizing: border-box; }
+        }
+    </style>
+</head>
+<body>
+    <h1>共享六边形棋盘</h1>
+    <div id="game-container">
+        <div id="game-board-container">
+            <svg id="game-board"></svg>
+        </div>
+        <div id="controls">
+            <h4>游戏状态</h4>
+            <div id="status-box">正在加载...</div>
+            <div id="last-move-info"></div>
+            
+            <h4>选择你的颜色</h4>
+            <div id="color-selector"></div>
+
+            <h4>选择你跟随的颜色</h4>
+            <div id="follow-color-selector"></div>
+
+            <h4>分数榜</h4>
+            <table id="scores-table">
+                <thead>
+                    <tr>
+                        <th>颜色</th>
+                        <th>线条</th>
+                        <th>得分</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <hr style="width:100%; border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+            <div class="action-buttons">
+                <button id="undo-button" disabled>悔棋</button>
+                <button id="reset-button">重置</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SVG_NS = "http://www.w3.org/2000/svg";
+        const board = document.getElementById('game-board');
+        const statusBox = document.getElementById('status-box');
+        const lastMoveInfo = document.getElementById('last-move-info');
+        const scoresTableBody = document.querySelector('#scores-table tbody');
+        const colorSelector = document.getElementById('color-selector');
+        const followColorSelector = document.getElementById('follow-color-selector');
+        const resetButton = document.getElementById('reset-button');
+        // 【新功能】 获取悔棋按钮的引用
+        const undoButton = document.getElementById('undo-button');
+        
+        const POINT_RADIUS_RATIO = 0.2;
+        const TOUCH_RADIUS_RATIO = 0.6;
+
+        let gameState = {};
+        let myColor = sessionStorage.getItem('myColor') || null;
+        let followColor = sessionStorage.getItem('followColor') || null;
+        let selectedPoints = [], isFetching = false;
+        
+        let turnTimerInterval = null;
+        let turnStartTime = null;
+
+        function axialToSvg(q, r) { return { x: 1.5 * q, y: Math.sqrt(3) / 2 * q + Math.sqrt(3) * r }; }
+        function getBoardBounds() { 
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            if (gameState.points) { gameState.points.forEach(p => { const { x, y } = axialToSvg(p[0], p[1]); minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }); }
+            const padding = 2; return { x: minX - padding, y: minY - padding, width: (maxX - minX) + 2 * padding, height: (maxY - minY) + 2 * padding, };
+        }
+        function drawBoard() { 
+            if (!gameState.points) return; board.innerHTML = ''; const bounds = getBoardBounds(); board.setAttribute('viewBox', `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`);
+            gameState.captured_triangles.forEach(tri => { const polygon = document.createElementNS(SVG_NS, 'polygon'); const p1 = axialToSvg(tri.points[0][0], tri.points[0][1]); const p2 = axialToSvg(tri.points[1][0], tri.points[1][1]); const p3 = axialToSvg(tri.points[2][0], tri.points[2][1]); polygon.setAttribute('points', `${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`); polygon.setAttribute('fill', tri.color); polygon.setAttribute('opacity', '0.6'); board.appendChild(polygon); });
+            gameState.lines.forEach(line => { for (let i = 0; i < line.points.length - 1; i++) { const p_start = axialToSvg(line.points[i][0], line.points[i][1]); const p_end = axialToSvg(line.points[i+1][0], line.points[i+1][1]); const svgLine = document.createElementNS(SVG_NS, 'line'); svgLine.setAttribute('x1', p_start.x); svgLine.setAttribute('y1', p_start.y); svgLine.setAttribute('x2', p_end.x); svgLine.setAttribute('y2', p_end.y); svgLine.setAttribute('stroke', line.color); svgLine.setAttribute('stroke-width', 0.2); svgLine.setAttribute('stroke-linecap', 'round'); board.appendChild(svgLine); } });
+            gameState.points.forEach(p => { const { x, y } = axialToSvg(p[0], p[1]); const q = p[0], r = p[1]; const circle = document.createElementNS(SVG_NS, 'circle'); circle.setAttribute('cx', x); circle.setAttribute('cy', y); circle.setAttribute('r', POINT_RADIUS_RATIO); circle.setAttribute('fill', '#333'); circle.classList.add('game-point'); circle.dataset.q = q; circle.dataset.r = r; const touchTarget = document.createElementNS(SVG_NS, 'circle'); touchTarget.setAttribute('cx', x); touchTarget.setAttribute('cy', y); touchTarget.setAttribute('r', TOUCH_RADIUS_RATIO); touchTarget.setAttribute('fill', 'transparent'); touchTarget.style.cursor = 'pointer'; touchTarget.addEventListener('click', () => onPointClick({target: circle})); board.appendChild(circle); board.appendChild(touchTarget); });
+        }
+        
+        function isMyTurn() {
+            if (!myColor || !followColor) return false;
+            const lastMoveColor = gameState.last_move_color;
+            if (lastMoveColor === null) return true;
+            if (lastMoveColor === followColor) return true;
+            return false;
+        }
+
+        function startTurnTimer() {
+            if (turnTimerInterval) clearInterval(turnTimerInterval);
+            turnStartTime = Date.now();
+            statusBox.textContent = '00:00';
+            turnTimerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - turnStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                statusBox.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function stopTurnTimer() {
+            clearInterval(turnTimerInterval);
+            turnTimerInterval = null;
+            turnStartTime = null;
+        }
+        
+        function updateUI() {
+            if (!gameState.players) return;
+
+            if (colorSelector.children.length === 0) {
+                gameState.players.forEach(color => {
+                    const btn = document.createElement('button'); btn.className = 'color-btn'; btn.style.backgroundColor = color; btn.dataset.color = color;
+                    btn.addEventListener('click', () => selectMyColor(color));
+                    colorSelector.appendChild(btn);
+                });
+            }
+            document.querySelectorAll('#color-selector .color-btn').forEach(btn => btn.classList.toggle('selected', btn.dataset.color === myColor));
+
+            if (followColorSelector.children.length === 0) {
+                gameState.players.forEach(color => {
+                    const btn = document.createElement('button'); btn.className = 'color-btn'; btn.style.backgroundColor = color; btn.dataset.color = color;
+                    btn.addEventListener('click', () => selectFollowColor(color));
+                    followColorSelector.appendChild(btn);
+                });
+            }
+            document.querySelectorAll('#follow-color-selector .color-btn').forEach(btn => btn.classList.toggle('selected', btn.dataset.color === followColor));
+            
+            const myTurnNow = isMyTurn();
+            if (myTurnNow) {
+                board.classList.remove('disabled');
+                statusBox.style.backgroundColor = myColor;
+                statusBox.style.color = 'white';
+                if (!turnTimerInterval) {
+                    startTurnTimer();
+                }
+            } else {
+                board.classList.add('disabled');
+                if (turnTimerInterval) {
+                    stopTurnTimer();
+                }
+                if (!myColor || !followColor) {
+                    statusBox.textContent = '请选择你的颜色和跟随的颜色';
+                    statusBox.style.backgroundColor = '#eee';
+                    statusBox.style.color = 'black';
+                } else {
+                    statusBox.textContent = `等待跟随的颜色操作...`;
+                    statusBox.style.backgroundColor = followColor;
+                    statusBox.style.color = 'white';
+                }
+            }
+            
+            // 【新功能】 控制悔棋按钮的可用状态
+            const canUndo = myColor && gameState.last_move_color === myColor;
+            undoButton.disabled = !canUndo;
+
+            if (gameState.last_move_color) { lastMoveInfo.innerHTML = `最近操作: <span class="score-color-box" style="background-color:${gameState.last_move_color};"></span>`; } else { lastMoveInfo.innerHTML = ''; }
+            scoresTableBody.innerHTML = '';
+            gameState.players.forEach(color => { const score = gameState.scores[color] || 0; const lineCount = gameState.line_counts[color] || 0; const row = scoresTableBody.insertRow(); row.insertCell().innerHTML = `<span class="score-color-box" style="background-color:${color};"></span>`; row.insertCell().textContent = lineCount; row.insertCell().textContent = score; });
+            document.querySelectorAll('.game-point').forEach(c => c.classList.remove('selected'));
+            selectedPoints.forEach(p => { document.querySelector(`.game-point[data-q='${p[0]}'][data-r='${p[1]}']`)?.classList.add('selected'); });
+        }
+
+        async function onPointClick(event) {
+            if (!isMyTurn() || gameState.game_over) return;
+            const point = [parseInt(event.target.dataset.q), parseInt(event.target.dataset.r)];
+            const index = selectedPoints.findIndex(p => p[0] === point[0] && p[1] === point[1]);
+            if (index > -1) { selectedPoints.splice(index, 1); } else { selectedPoints.push(point); }
+            if (selectedPoints.length === 2) { const pointsToSubmit = [...selectedPoints]; selectedPoints = []; await makeMove(pointsToSubmit[0], pointsToSubmit[1]); }
+            updateUI();
+        }
+
+        async function makeMove(p1, p2) { try { const response = await fetch('/api/move', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ p1, p2 }) }); if (!response.ok) { const data = await response.json(); alert('错误: ' + data.error); } await fetchGameState(); } catch (error) { console.error("请求失败:", error); } }
+        async function selectMyColor(color) {
+            sessionStorage.setItem('myColor', color);
+            await fetch('/api/select_color', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color }) });
+            myColor = color;
+            await fetchGameState(); 
+        }
+        async function selectFollowColor(color) {
+            sessionStorage.setItem('followColor', color);
+            followColor = color;
+            updateUI();
+        }
+
+        // 【新功能】 悔棋操作的处理函数
+        async function handleUndo() {
+            try {
+                const response = await fetch('/api/undo', { method: 'POST' });
+                if (!response.ok) {
+                    const data = await response.json();
+                    alert('无法悔棋: ' + data.error);
+                }
+                await fetchGameState();
+            } catch (error) {
+                console.error("悔棋失败:", error);
+            }
+        }
+
+        async function fetchGameState() { 
+            if (isFetching) return; isFetching = true; 
+            try { 
+                const response = await fetch('/api/gamestate'); 
+                const data = await response.json();
+                const boardChanged = JSON.stringify(gameState) !== JSON.stringify(data.game);
+                gameState = data.game; 
+                if (data.my_color) { myColor = data.my_color; sessionStorage.setItem('myColor', myColor); } 
+                if (boardChanged) { drawBoard(); } 
+                updateUI(); 
+            } catch (error) { 
+                console.error("获取状态失败:", error); 
+            } finally { 
+                isFetching = false; 
+            } 
+        }
+        
+        async function init() {
+            resetButton.addEventListener('click', async () => { if(confirm("确定要重置整个棋盘吗？所有人的进度都将丢失！")) { await fetch('/api/reset', { method: 'POST' }); await fetchGameState(); } });
+            // 【新功能】 为悔棋按钮绑定事件
+            undoButton.addEventListener('click', handleUndo);
+
+            await fetchGameState(); 
+            setInterval(fetchGameState, 2000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
