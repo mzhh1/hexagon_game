@@ -1,0 +1,125 @@
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    flex-direction: column; 
+    background-color: #f0f2f5; 
+    margin: 0; 
+    padding: 20px; 
+    box-sizing: border-box; 
+    min-height: 100vh;
+}
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+#game-container { 
+    display: flex; 
+    gap: 30px; 
+    align-items: flex-start;
+    width: 100%;
+    max-width: 900px;
+    justify-content: center;
+}
+#game-board-container {
+    flex: 1; 
+    max-width: 600px;
+    border: 2px solid #ccc; /* 默认边框 */
+    background-color: #fff; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: border 0.3s;
+}
+#game-board-container.active {
+    border: 4px solid #428bca; /* 可下时加粗高亮 */
+}
+#game-board {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    transition: opacity 0.3s ease, border 0.3s;
+    /* 不再用透明度区分可下状态 */
+}
+#game-board.disabled {
+    /* 不再设置opacity和pointer-events */
+}
+#controls { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px; 
+    background-color: #fff; 
+    padding: 20px; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+    width: 220px;
+    flex-shrink: 0;
+}
+#status-box { padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; border: 1px solid #ddd; transition: background-color 0.3s; }
+#last-move-info {
+    font-size: 0.9em;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 20px;
+}
+#scores-table { width: 100%; border-collapse: collapse; margin-top: 5px; text-align: center;}
+#scores-table th {
+    font-weight: normal;
+    font-size: 0.8em;
+    color: #666;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+}
+#scores-table td { padding: 6px 2px; }
+.score-color-box { display: inline-block; width: 15px; height: 15px; border-radius: 3px; vertical-align: middle; }
+#color-selector, #follow-color-selector { 
+    display: flex; 
+    justify-content: space-around; 
+    padding: 5px 0;
+}
+.color-btn { 
+    width: 35px; 
+    height: 35px; 
+    border-radius: 50%; 
+    border: 3px solid transparent; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    padding: 0;
+}
+.color-btn.selected { 
+    border-color: #000; 
+    box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+    transform: scale(1.1); 
+}
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+.action-buttons button {
+    width: 100%; padding: 10px 15px; border: none; color: white; font-size: 1em; border-radius: 5px; cursor: pointer; transition: background-color 0.2s;
+}
+#reset-button { background-color: #d9534f; }
+#reset-button:hover { background-color: #c9302c; }
+/* 【新功能】 悔棋按钮样式 */
+#undo-button { background-color: #f0ad4e; }
+#undo-button:hover { background-color: #ec971f; }
+#undo-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.game-point { cursor: pointer; transition: r 0.2s, fill 0.2s; }
+.game-point:hover { r: 0.25; }
+.game-point.selected { fill: #222; r: 0.3; }
+
+@media (max-width: 768px) {
+    body { padding: 10px; }
+    #game-container { flex-direction: column; align-items: center; gap: 20px; }
+    #game-board-container { width: 95vw; max-width: 95vw; }
+    #controls { width: 95vw; box-sizing: border-box; }
+} 
