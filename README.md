@@ -1,5 +1,8 @@
 # 三角连锁棋(共享六边形棋盘游戏)
 
+## !!!注意本项目移动为[Playground](https://github.com/mzhh1/Playground)的子项目，不再维护。
+[前往新地址](https://github.com/mzhh1/Playground/tree/main/hexagon_game)
+
 ## 项目简介
 
 这是一个基于 Flask 的多人共享六边形棋盘游戏。玩家通过网页选择颜色，在棋盘上依次放置线条，围成三角形并染色，最终填满所有三角形即游戏结束。支持悔棋、重置等功能，适合多人协作或对抗。
